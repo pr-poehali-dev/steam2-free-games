@@ -18,6 +18,15 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 
+const AUTH_URL = 'https://functions.poehali.dev/1716385b-6d71-4ee5-956d-072b85248157';
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  coins: number;
+}
+
 const COVER_1 = 'https://cdn.poehali.dev/projects/42eab537-72c4-4eb0-8417-103f41796391/files/849b7f27-3633-4869-b5d3-469a1af2ac83.jpg';
 const COVER_2 = 'https://cdn.poehali.dev/projects/42eab537-72c4-4eb0-8417-103f41796391/files/981f4647-334a-4942-9d80-2fa6ae09fbfe.jpg';
 
@@ -59,13 +68,27 @@ const INSTRUCTIONS = [
 ];
 
 const Index = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [coins, setCoins] = useState(0);
   const [filter, setFilter] = useState('Все');
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authForm, setAuthForm] = useState({ username: '', email: '', password: '' });
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(30);
   const [earning, setEarning] = useState(false);
+
+  // Восстанавливаем сессию
+  useEffect(() => {
+    const saved = localStorage.getItem('steam2_user');
+    if (saved) {
+      const u = JSON.parse(saved) as User;
+      setUser(u);
+      setCoins(u.coins);
+    }
+  }, []);
 
   useEffect(() => {
     if (!earning) return;
@@ -78,6 +101,42 @@ const Index = () => {
     const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [earning, secondsLeft]);
+
+  const handleAuth = async () => {
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const body = authMode === 'register'
+        ? { action: 'register', username: authForm.username, email: authForm.email, password: authForm.password }
+        : { action: 'login', email: authForm.email, password: authForm.password };
+
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || 'Ошибка авторизации');
+        return;
+      }
+      localStorage.setItem('steam2_user', JSON.stringify(data.user));
+      setUser(data.user);
+      setCoins(data.user.coins);
+      setAuthOpen(false);
+      setAuthForm({ username: '', email: '', password: '' });
+    } catch {
+      setAuthError('Ошибка соединения с сервером');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('steam2_user');
+    setUser(null);
+    setCoins(0);
+  };
 
   const filtered = GAMES.filter((g) => {
     const byGenre = filter === 'Все' || g.genre === filter;
@@ -111,40 +170,79 @@ const Index = () => {
               <Icon name="Coins" className="text-neon-magenta" size={16} />
               <span className="font-display text-sm">{coins}</span>
             </div>
-            <Dialog open={authOpen} onOpenChange={setAuthOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 neon-glow">
-                  Войти
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground hidden md:block">Привет, <span className="text-foreground font-medium">{user.username}</span></span>
+                <Button size="sm" variant="outline" onClick={handleLogout} className="border-border text-muted-foreground hover:text-foreground">
+                  <Icon name="LogOut" size={15} />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="glass border-border">
-                <DialogHeader>
-                  <DialogTitle className="font-display text-primary neon-text text-2xl">
-                    {authMode === 'login' ? 'Вход в аккаунт' : 'Регистрация'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  {authMode === 'register' && (
-                    <Input placeholder="Никнейм" className="bg-secondary border-border" />
-                  )}
-                  <Input placeholder="Email" type="email" className="bg-secondary border-border" />
-                  <Input placeholder="Пароль" type="password" className="bg-secondary border-border" />
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Icon name="ShieldCheck" className="text-primary" size={16} />
-                    Защита аккаунта: шифрование и двухфакторная проверка
-                  </div>
-                  <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 neon-glow">
-                    {authMode === 'login' ? 'Войти' : 'Создать аккаунт'}
+              </div>
+            ) : (
+              <Dialog open={authOpen} onOpenChange={(o) => { setAuthOpen(o); setAuthError(''); }}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 neon-glow">
+                    Войти
                   </Button>
-                  <button
-                    onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                    className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {authMode === 'login' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
-                  </button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="glass border-border">
+                  <DialogHeader>
+                    <DialogTitle className="font-display text-primary neon-text text-2xl">
+                      {authMode === 'login' ? 'Вход в аккаунт' : 'Регистрация'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    {authMode === 'register' && (
+                      <Input
+                        placeholder="Никнейм"
+                        className="bg-secondary border-border"
+                        value={authForm.username}
+                        onChange={(e) => setAuthForm({ ...authForm, username: e.target.value })}
+                      />
+                    )}
+                    <Input
+                      placeholder="Email"
+                      type="email"
+                      className="bg-secondary border-border"
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Пароль"
+                      type="password"
+                      className="bg-secondary border-border"
+                      value={authForm.password}
+                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+                    />
+                    {authError && (
+                      <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                        <Icon name="CircleAlert" size={15} />
+                        {authError}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Icon name="ShieldCheck" className="text-primary" size={16} />
+                      Защита аккаунта: шифрование и двухфакторная проверка
+                    </div>
+                    <Button
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 neon-glow"
+                      onClick={handleAuth}
+                      disabled={authLoading}
+                    >
+                      {authLoading
+                        ? <><Icon name="Loader" size={16} className="mr-2 animate-spin" /> Загрузка...</>
+                        : authMode === 'login' ? 'Войти' : 'Создать аккаунт'}
+                    </Button>
+                    <button
+                      onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }}
+                      className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {authMode === 'login' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
+                    </button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
       </header>
@@ -335,15 +433,27 @@ const Index = () => {
       {/* ACCOUNT */}
       <section id="account" className="container py-20">
         <div className="glass rounded-2xl border border-border p-8 md:p-10">
+          {!user && (
+            <div className="text-center py-10">
+              <Icon name="LockKeyhole" className="text-muted-foreground mx-auto mb-4" size={40} />
+              <h2 className="text-2xl mb-2">Войдите в аккаунт</h2>
+              <p className="text-muted-foreground mb-6">Чтобы увидеть личный кабинет, сначала войдите или зарегистрируйтесь.</p>
+              <Button onClick={() => setAuthOpen(true)} className="bg-primary text-primary-foreground neon-glow">
+                Войти / Зарегистрироваться
+              </Button>
+            </div>
+          )}
+          {user && (
+          <>
           <div className="flex flex-wrap items-center justify-between gap-6 mb-8">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-neon-purple flex items-center justify-center neon-glow">
                 <Icon name="User" className="text-primary-foreground" size={32} />
               </div>
               <div>
-                <h2 className="text-2xl mb-1">Личный кабинет</h2>
+                <h2 className="text-2xl mb-1">{user.username}</h2>
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Icon name="ShieldCheck" className="text-primary" size={14} /> Аккаунт защищён
+                  <Icon name="ShieldCheck" className="text-primary" size={14} /> {user.email}
                 </p>
               </div>
             </div>
@@ -381,6 +491,8 @@ const Index = () => {
               </div>
             </TabsContent>
           </Tabs>
+          </>
+          )}
         </div>
       </section>
 

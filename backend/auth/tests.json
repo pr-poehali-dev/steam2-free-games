@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "register", "username": "testuser99", "email": "test99@steam2.io", "password": "secret123"},
+      "expectedStatus": 200,
+      "expectedBody": {"session_id": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "login", "email": "test99@steam2.io", "password": "wrongpass"},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login success",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "login", "email": "test99@steam2.io", "password": "secret123"},
+      "expectedStatus": 200,
+      "expectedBody": {"session_id": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
