@@ -55,7 +55,8 @@
   }
 
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-background text-foreground;
+    font-family: "Rubik", sans-serif;
     background-image:
       radial-gradient(
         ellipse 80% 50% at 20% -10%,
@@ -73,9 +74,9 @@
   h1,
   h2,
   h3,
-  h4,
-  .font-display {
-    @apply font-display uppercase tracking-wide;
+  h4 {
+    font-family: "Oswald", sans-serif;
+    @apply uppercase tracking-wide;
   }
 }
 
