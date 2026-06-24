@@ -537,7 +537,7 @@ const Index = () => {
 const GameCard = ({ game }: { game: Game }) => {
   const handleDownload = () => {
     const query = encodeURIComponent(game.title);
-    window.open(`https://rutracker.org/forum/tracker.php?nm=${query}`, '_blank');
+    window.open(`https://thelastgame.org/?s=${query}`, '_blank');
   };
 
   return (
