@@ -11,12 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+
 
 const AUTH_URL = 'https://functions.poehali.dev/1716385b-6d71-4ee5-956d-072b85248157';
 
@@ -464,33 +459,23 @@ const Index = () => {
             </div>
           </div>
 
-          <Tabs defaultValue="library">
-            <TabsList className="bg-secondary border border-border">
-              <TabsTrigger value="library">Мои игры</TabsTrigger>
-              <TabsTrigger value="downloads">Скачанные</TabsTrigger>
-            </TabsList>
-            <TabsContent value="library" className="pt-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-                {GAMES.slice(0, 4).map((g) => (
-                  <GameCard key={g.id} game={g} owned />
-                ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+            {[
+              { icon: 'Coins', label: 'Баланс монет', value: `${coins} монет`, color: 'text-neon-magenta' },
+              { icon: 'Gamepad2', label: 'Доступно игр', value: '100+ бесплатных', color: 'text-primary' },
+              { icon: 'Download', label: 'Скачать игры', value: 'Через торрент-паки', color: 'text-neon-purple' },
+            ].map((s) => (
+              <div key={s.label} className="p-4 rounded-xl bg-card/60 border border-border">
+                <Icon name={s.icon} className={s.color} size={22} />
+                <div className="text-xs text-muted-foreground mt-2 mb-1">{s.label}</div>
+                <div className="font-display text-sm">{s.value}</div>
               </div>
-            </TabsContent>
-            <TabsContent value="downloads" className="pt-6">
-              <div className="space-y-3">
-                {GAMES.slice(0, 3).map((g) => (
-                  <div key={g.id} className="flex items-center gap-4 p-3 rounded-xl bg-card/60 border border-border">
-                    <img src={g.cover} alt={g.title} className="w-16 h-12 rounded-md object-cover" />
-                    <div className="flex-1">
-                      <div className="font-display text-sm">{g.title}</div>
-                      <div className="text-xs text-muted-foreground">{g.genre} · Загружено</div>
-                    </div>
-                    <Icon name="CircleCheck" className="text-primary" size={20} />
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground mt-5 flex items-center gap-2">
+            <Icon name="Info" size={15} className="text-primary" />
+            Игры скачиваются через торрент-паки — перейди в раздел «Торрент-паки» и выбери нужный архив.
+          </p>
           </>
           )}
         </div>
@@ -549,7 +534,13 @@ const Index = () => {
   );
 };
 
-const GameCard = ({ game, owned }: { game: Game; owned?: boolean }) => (
+const GameCard = ({ game }: { game: Game }) => {
+  const handleDownload = () => {
+    const query = encodeURIComponent(game.title);
+    window.open(`https://rutracker.org/forum/tracker.php?nm=${query}`, '_blank');
+  };
+
+  return (
   <div className="group rounded-xl overflow-hidden bg-card border border-border hover-scale hover:border-primary/50 transition-colors">
     <div className="relative aspect-[3/4] overflow-hidden">
       <img src={game.cover} alt={game.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -560,7 +551,7 @@ const GameCard = ({ game, owned }: { game: Game; owned?: boolean }) => (
         </Badge>
       )}
       <Badge className={`absolute top-2 right-2 border-0 text-[10px] ${game.free ? 'bg-primary/90 text-primary-foreground' : 'bg-secondary/90'}`}>
-        {game.free ? 'FREE' : `${game.price}`}
+        {game.free ? 'FREE' : `${game.price} монет`}
       </Badge>
     </div>
     <div className="p-3">
@@ -571,17 +562,17 @@ const GameCard = ({ game, owned }: { game: Game; owned?: boolean }) => (
           <Icon name="Star" size={12} className="text-neon-magenta fill-neon-magenta" /> {game.rating}
         </span>
       </div>
-      <Button size="sm" className="w-full mt-3 bg-secondary hover:bg-primary hover:text-primary-foreground border border-border transition-colors text-xs h-8">
-        {owned ? (
-          <><Icon name="Play" size={12} className="mr-1" /> Играть</>
-        ) : game.free ? (
-          <><Icon name="Download" size={12} className="mr-1" /> Скачать</>
-        ) : (
-          <><Icon name="Coins" size={12} className="mr-1" /> {game.price}</>
-        )}
+      <Button
+        size="sm"
+        onClick={handleDownload}
+        className="w-full mt-3 bg-secondary hover:bg-primary hover:text-primary-foreground border border-border transition-colors text-xs h-8"
+      >
+        <Icon name="Download" size={12} className="mr-1" />
+        {game.free ? 'Скачать' : `Купить · ${game.price} монет`}
       </Button>
     </div>
   </div>
-);
+  );
+};
 
 export default Index;
